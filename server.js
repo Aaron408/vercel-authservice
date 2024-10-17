@@ -34,6 +34,19 @@ db.connect((err) => {
   }
 });
 
+app.get("/datos", (req, res) => {
+  const query = `
+      SELECT * FROM prueba;
+    `;
+  db.query(query, (err, result) => {
+    if (err) {
+      res.status(500).json({ error: "Consulta no procesada" });
+    } else {
+      res.status(200).json(result);
+    }
+  });
+});
+
 //-------------TOKEN VERIFICATION----------------//
 
 // Middleware para verificar el token
