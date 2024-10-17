@@ -54,44 +54,7 @@ app.get("/datos", (req, res) => {
 //-------------TOKEN VERIFICATION----------------//
 
 // Middleware para verificar el token
-const verifyToken = async (req, res, next) => {
-  const token = req.headers["authorization"]?.split(" ")[1];
 
-  if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Acceso denegado. Token no proporcionado." });
-  }
-
-  try {
-    // Busca el token en la base de datos
-    const session = await db.query(
-      "SELECT * FROM session_token WHERE token = ?",
-      [token]
-    );
-
-    if (session.length === 0) {
-      return res
-        .status(401)
-        .json({ message: "Token inválido o no encontrado." });
-    }
-
-    // Verifica si el token ha expirado
-    const sessionData = session[0];
-    const now = new Date();
-    if (new Date(sessionData.expires_date) < now) {
-      return res.status(401).json({ message: "Token ha expirado." });
-    }
-
-    // Si todo está bien, pasa al siguiente middleware
-    req.user = { id: sessionData.user_id };
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: "Error al verificar el token." });
-  }
-};
-
-module.exports = verifyToken;
 
 //-------------LOGIN PAGE-------------//
 
