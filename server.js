@@ -11,10 +11,15 @@ const crypto = require("crypto");
 
 require("dotenv").config(); // Cargar desde la raíz del proyecto
 
+// Activar CORS
+app.use(cors({
+  origin: 'http://localhost:3000', // Cambia el puerto según donde esté corriendo tu app local
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true // Si necesitas enviar cookies o autenticación
+}));
+
 app.use(express.json());
 
-// Activar CORS
-app.use(cors());
 
 // Configuración de la base de datos
 const db = mysql.createConnection({
