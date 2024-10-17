@@ -51,10 +51,6 @@ app.get("/datos", (req, res) => {
   });
 });
 
-//-------------TOKEN VERIFICATION----------------//
-
-// Middleware para verificar el token
-
 
 //-------------LOGIN PAGE-------------//
 
