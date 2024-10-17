@@ -4,11 +4,10 @@ const mysql = require("mysql2");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const app = express();
-const PORT = process.env.AUTH_PORT || 5000;
+const PORT = process.env.PORT || 5000;
 const cors = require("cors"); // Importar cors
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-const { error } = require("console");
 
 require("dotenv").config(); // Cargar desde la raíz del proyecto
 
