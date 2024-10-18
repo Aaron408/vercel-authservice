@@ -9,13 +9,13 @@ const cors = require("cors"); // Importar cors
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 
-require("dotenv").config(); // Cargar desde la raíz del proyecto
+require("dotenv").config();
 
 // Activar CORS
 app.use(cors({
-  origin: 'http://localhost:3000', // Cambia el puerto según donde esté corriendo tu app local
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true // Si necesitas enviar cookies o autenticación
+  credentials: true
 }));
 
 app.use(express.json());
@@ -51,6 +51,42 @@ app.get("/datos", (req, res) => {
   });
 });
 
+//-------------TOKEN VERIFICATION----------------//
+
+// Middleware para verificar el token
+const verifyToken = async (req, res, next) => {
+  const token = req.headers["authorization"]?.split(" ")[1];
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ message: "Acceso denegado. Token no proporcionado." });
+  }
+
+  try {
+    const session = await db.query(
+      "SELECT * FROM session_token WHERE token = ?",
+      [token]
+    );
+
+    if (session.length === 0) {
+      return res
+        .status(401)
+        .json({ message: "Token inválido o no encontrado." });
+    }
+
+    const sessionData = session[0];
+    const now = new Date();
+    if (new Date(sessionData.expires_date) < now) {
+      return res.status(401).json({ message: "Token ha expirado." });
+    }
+
+    req.user = { id: sessionData.user_id };
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "Error al verificar el token." });
+  }
+};
 
 //-------------LOGIN PAGE-------------//
 
@@ -77,7 +113,6 @@ const saveToken = (userId, token, expiresAt) => {
 app.post("/api/login", (req, res) => {
   const { email, password, rememberMe } = req.body;
 
-  // Hash the password using MD5
   const hashedPassword = crypto
     .createHash("md5")
     .update(password)
