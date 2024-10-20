@@ -14,7 +14,7 @@ require("dotenv").config();
 // Activar CORS
 app.use(
   cors({
-    origin: "*",
+    origin: "http://localhost:3000",  // Permitir solo este origen
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
