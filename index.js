@@ -2,19 +2,21 @@ const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require("axios");
+const crypto = require('crypto');
 
+require("dotenv").config();
+
+const jwt = require("jsonwebtoken");
 const app = express();
-
 const PORT = process.env.AUTH_PORT || 5000;
 
 app.use(express.json());
 
-require("dotenv").config();
 
 // Activar CORS
 app.use(
   cors({
-    origin: "http://localhost:3000",  // Permitir solo este origen
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
@@ -93,7 +95,6 @@ app.post("/api/login", (req, res) => {
       console.error("Database query error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
-    console.log(results.length);
     if (results.length == 0) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
