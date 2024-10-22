@@ -2,7 +2,7 @@ const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
 const axios = require("axios");
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 require("dotenv").config();
 
@@ -12,7 +12,6 @@ const PORT = process.env.AUTH_PORT || 5000;
 
 app.use(express.json());
 
-
 // Activar CORS
 app.use(
   cors({
@@ -21,6 +20,16 @@ app.use(
     credentials: true,
   })
 );
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  next();
+});
 
 // Configuración de la base de datos
 const db = mysql.createConnection({
