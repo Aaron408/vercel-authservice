@@ -22,13 +22,6 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  res.append("Access-Control-Allow-Origin", ["*"]);
-  res.append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.append("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  next();
-});
-
 // Configuración de la base de datos
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
