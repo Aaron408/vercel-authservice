@@ -7,19 +7,20 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 const app = express();
 const PORT = process.env.AUTH_PORT || 5000;
 
 app.use(express.json());
 
-// // Activar CORS
-// app.use(
-//   cors({
-//     origin: "*",
-//     methods: ["GET", "POST", "PUT", "DELETE"],
-//     credentials: true,
-//   })
-// );
+// Activar CORS
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
 app.use((req, res, next) => {
   res.append("Access-Control-Allow-Origin", ["*"]);
@@ -86,10 +87,9 @@ const saveToken = (userId, token, expiresAt) => {
   });
 };
 
-app.post("/api/login", (req, res) => {
-  const { email, password, rememberMe } = req.body;
+app.get("/api/login", (req, res) => {
+  const { email, password, rememberMe } = req.query;
 
-  // Hash the password using MD5
   const hashedPassword = crypto
     .createHash("md5")
     .update(password)
@@ -106,11 +106,11 @@ app.post("/api/login", (req, res) => {
     }
 
     const user = results[0];
-    const expiresIn = rememberMe ? "30d" : "1d";
+    const expiresIn = rememberMe === "true" ? "30d" : "1d"; // rememberMe is a string in a GET request
     const token = generateToken(user, expiresIn);
 
     const expiresAt = new Date(
-      Date.now() + (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000
+      Date.now() + (rememberMe === "true" ? 30 : 1) * 24 * 60 * 60 * 1000
     );
     saveToken(user.id, token, expiresAt);
 
@@ -333,6 +333,164 @@ const verifyGoogleToken = async (token) => {
   );
   return response.data;
 };
+
+//---------------Register Page----------------//
+
+app.get("/api/checkEmail", (req, res) => {
+  const { email } = req.query;
+
+  db.query(
+    "SELECT COUNT(*) as count FROM users WHERE email = ?",
+    [email],
+    (err, results) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: "Error al verificar el correo" });
+      }
+
+      if (results[0].count > 0) {
+        return res.status(200).json({ exists: true });
+      } else {
+        return res.status(200).json({ exists: false });
+      }
+    }
+  );
+});
+
+const generateVerificationCode = () => {
+  return Math.floor(100000 + Math.random() * 900000);
+};
+
+app.post("/api/sendVerificationCode", (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Correo electrónico requerido" });
+  }
+
+  const verificationCode = generateVerificationCode();
+
+  db.query(
+    "INSERT INTO verification_codes (email, code) VALUES (?, ?)",
+    [email, verificationCode],
+    (err, result) => {
+      if (err) {
+        console.error("Error al insertar el código de verificación:", err);
+        return res
+          .status(500)
+          .json({ message: "Hubo un error al generar el código." });
+      }
+
+      const transporter = nodemailer.createTransport({
+        host: "smtp.titan.email",
+        port: 465,
+        secure: true,
+        auth: {
+          user: process.env.NODE_EMAIL,
+          pass: process.env.NODE_PASSWORD,
+        },
+      });
+
+      const enviarCorreo = (email, verificationCode, res) => {
+        const mailOptions = {
+          from: `"CRONIS" <${process.env.NODE_EMAIL}>`,
+          to: email,
+          subject: "Código de verificación",
+          text: `Tu código de verificación para CRONIS es: ${verificationCode}. Este código expira en 3 minutos.`, // Cuerpo del correo en texto plano
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error("Error al enviar el correo de verificación:", error);
+            console.error("Detalles del error:", error.message, error.stack);
+
+            return res.status(500).json({
+              message: "Hubo un error al enviar el correo de verificación.",
+            });
+          }
+
+          res.status(200).json({
+            message: "Código de verificación enviado correctamente",
+          });
+        });
+      };
+
+      enviarCorreo(email, verificationCode, res);
+    }
+  );
+});
+
+app.post("/api/verify-code", (req, res) => {
+  const { email, code } = req.body;
+
+  db.query(
+    "SELECT * FROM verification_codes WHERE email = ? AND code = ? AND expires_at > NOW()",
+    [email, code],
+    (err, results) => {
+      if (err) {
+        console.error("Error al verificar el código:", err);
+        return res.status(500).json({ error: "Error interno del servidor" });
+      }
+
+      if (results.length > 0) {
+        res.json({ isValid: true });
+      } else {
+        res.json({ isValid: false });
+      }
+    }
+  );
+});
+
+app.post("/api/register", async (req, res) => {
+  const { nombre, email, password } = req.body;
+
+  if (!nombre || !email || !password) {
+    return res.status(400).json({ error: "Todos los campos son requeridos" });
+  }
+
+  try {
+    db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email],
+      async (err, results) => {
+        if (err) {
+          console.error("Error al verificar el usuario existente:", err);
+          return res.status(500).json({ error: "Error interno del servidor" });
+        }
+
+        if (results.length > 0) {
+          return res.status(400).json({ error: "El usuario ya existe" });
+        }
+
+        const hashedPassword = crypto
+          .createHash("md5")
+          .update(password)
+          .digest("hex");
+
+        db.query(
+          "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+          [nombre, email, hashedPassword],
+          (err, result) => {
+            if (err) {
+              console.error("Error al insertar nuevo usuario:", err);
+              return res
+                .status(500)
+                .json({ error: "Error al crear nuevo usuario" });
+            }
+
+            db.query("DELETE FROM verification_codes WHERE email = ?", [email]);
+
+            res.status(201).json({ success: true, userId: result.insertId });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    console.error("Error al registrar el usuario:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
 
 // Levantar el servidor
 app.listen(PORT, () => {
