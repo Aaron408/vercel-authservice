@@ -294,7 +294,7 @@ app.post("/api/auth/google", async (req, res) => {
   }
 });
 
-// Función para generar el token JWT con duración de 1 mes
+// Generar el token JWT con duración de 1 mes
 const generateToken30Days = (user) => {
   const payload = {
     userId: user.id,
