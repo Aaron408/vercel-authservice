@@ -14,13 +14,7 @@ const PORT = process.env.AUTH_PORT || 5000;
 app.use(express.json());
 
 // Activar CORS
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  })
-);
+app.use(cors());
 
 // Configuración de la base de datos
 const db = mysql.createConnection({
